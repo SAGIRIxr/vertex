@@ -22,6 +22,7 @@ class Client {
     this.client = clients[client.type];
     this.alias = client.alias;
     this.firstLastPiecePrio = client.firstLastPiecePrio || false;
+    this.sequentialDownload = client.sequentialDownload || false;
     this.password = client.password;
     this.username = client.username;
     this.clientUrl = client.clientUrl;
@@ -60,6 +61,10 @@ class Client {
         }
       }
     }
+    if (this._client.autoRecheck) {
+      this.autoRecheckJob = cron.schedule(this._client.recheckCron, () => this.autoRecheck());
+    }
+
     this.recordJob = cron.schedule('20 */5 * * * *', () => this.record());
     if (client.type === 'qBittorrent') {
       this.trackerSyncJob = cron.schedule('*/5 * * * *', () => this.trackerSync());
@@ -185,6 +190,10 @@ class Client {
     if (this.autoDeleteJob) {
       this.autoDeleteJob.stop();
       delete this.autoDeleteJob;
+    }
+    if (this.autoRecheckJob) {
+      this.autoRecheckJob.stop();
+      delete this.autoRecheckJob;
     }
     if (this.spaceAlarmJob) {
       this.spaceAlarmJob.stop();
@@ -326,7 +335,7 @@ class Client {
     if (!this.status) {
       throw new Error('客户端' + this.alias + '当前状态为不可用');
     }
-    const { statusCode } = await this.client.addTorrent(this.clientUrl, this.cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused);
+    const { statusCode } = await this.client.addTorrent(this.clientUrl, this.cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused, this.sequentialDownload);
     if (statusCode !== 200 && statusCode !== 204) {
       this.login();
       throw new Error('状态码: ' + statusCode);
@@ -344,8 +353,14 @@ class Client {
     }
   }
 
+  async deleteTorrentTag (hash, tag) {
+    if (this._client.type === 'qBittorrent') {
+      await this.client.deleteTorrentTag(this.clientUrl, this.cookie, hash, tag);
+    }
+  }
+
   async addTorrentByTorrentFile (filepath, hash, isSkipChecking = false, uploadLimit = 0, downloadLimit = 0, savePath, category, autoTMM, paused) {
-    const { statusCode } = await this.client.addTorrentByTorrentFile(this.clientUrl, this.cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused);
+    const { statusCode } = await this.client.addTorrentByTorrentFile(this.clientUrl, this.cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused, this.sequentialDownload);
     if (statusCode !== 200 && statusCode !== 204) {
       this.login();
       throw new Error('状态码: ' + statusCode);
@@ -463,6 +478,46 @@ class Client {
             return;
           }
         }
+      }
+    }
+  };
+
+  async autoRecheck () {
+    const categoryList = this._client.categoryList;
+    const minProgress = this._client.minProgressDifference;
+    const minUploadSpeed = this._client.minUploadProtection;
+    const stateList = ['checkingDL', 'checkingUP', 'moving'];
+    if (!this.status) {
+      return;
+    }
+    const torrents = this.maindata.torrents;
+    const sizeMap = {};
+    torrents.forEach(torrent => {
+      if (!sizeMap[torrent.size]) {
+        sizeMap[torrent.size] = [];
+      }
+      sizeMap[torrent.size].push(torrent);
+    });
+    for (const torrents of Object.values(sizeMap)) {
+      if (!torrents) continue;
+      let minProgressTorrent = torrents[0];
+      let maxProgressTorrent = torrents[0];
+      for (const t of torrents) {
+        if (!t) continue;
+        if (t.uploadSpeed >= minUploadSpeed || categoryList.includes(t.category) || stateList.includes(t.state)) continue;
+        if (t.progress < minProgressTorrent.progress) {
+          minProgressTorrent = t;
+        }
+        if (t.progress > maxProgressTorrent.progress) {
+          maxProgressTorrent = t;
+        }
+      }
+      const progressDifference = maxProgressTorrent.progress - minProgressTorrent.progress;
+      if (progressDifference > minProgress) {
+        await this.reannounceTorrent(minProgressTorrent);
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+        await this.recheckTorrent(minProgressTorrent.hash);
+        logger.sc(`下载器：[${this.alias}]\n分类:[${minProgressTorrent.category}]和[${maxProgressTorrent.category}]大小相同且进度差距${Math.round(progressDifference * 100)}% ,校验[${minProgressTorrent.category}]分类的种子\n种子名: ${minProgressTorrent.name}\n`);
       }
     }
   };
@@ -618,6 +673,12 @@ class Client {
       return await this.client.getLogs(this.clientUrl, this.cookie, hash);
     }
     return [];
+  }
+
+  async recheckTorrent (hash) {
+    if (this._client.type === 'qBittorrent') {
+      await this.client.recheckTorrent(this.clientUrl, this.cookie, hash);
+    }
   }
 }
 module.exports = Client;

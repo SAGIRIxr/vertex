@@ -176,6 +176,12 @@
           <a-checkbox v-model:checked="downloader.firstLastPiecePrio">先下载首尾文件块</a-checkbox>
         </a-form-item>
         <a-form-item
+          label="顺序下载"
+          name="sequentialDownload"
+          extra="顺序下载, 同 qBittorrent 右键菜单 - 顺序下载">
+          <a-checkbox v-model:checked="downloader.sequentialDownload">顺序下载</a-checkbox>
+        </a-form-item>
+        <a-form-item
           label="空间警告"
           name="spaceAlarm"
           extra="下载器剩余空间小于一定值时推送警告通知, 15 分钟一次"
@@ -354,7 +360,12 @@ export default {
         autoDeleteCron: '* * * * *',
         autoReannounce: true,
         autoDelete: true,
-        deleteRules: []
+        deleteRules: [],
+        autoRecheck: false,
+        recheckCron: '*/3 * * * *',
+        minProgressDifference: '0.05',
+        minUploadProtection: '52428800',
+        categoryList: ['keep']
       },
       loading: true,
       registCode: []
@@ -404,6 +415,9 @@ export default {
     },
     modifyClick (row) {
       this.downloader = { ...row };
+      if (!this.downloader.categoryList) {
+        this.downloader.categoryList = ['keep'];
+      }
     },
     cloneClick (row) {
       this.downloader = { ...row, deleteRules: [...row.deleteRules] };

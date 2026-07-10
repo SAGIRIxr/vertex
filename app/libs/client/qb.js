@@ -74,7 +74,7 @@ exports.isVersionGreaterThan = function (version, compareVersion) {
   return false;
 };
 
-exports.addTorrent = async function (clientUrl, cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused) {
+exports.addTorrent = async function (clientUrl, cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused, sequentialDownload) {
   const apiVersion = await exports.getCachedApiVersion(clientUrl, cookie);
   const pausedParam = apiVersion && exports.isVersionGreaterThan(apiVersion, '2.9.3') ? 'stopped' : 'paused';
 
@@ -90,7 +90,8 @@ exports.addTorrent = async function (clientUrl, cookie, torrentUrl, isSkipChecki
       upLimit: uploadLimit,
       dlLimit: downloadLimit,
       firstLastPiecePrio: firstLastPiecePrio + '',
-      [pausedParam]: paused ? 'true' : 'false'
+      [pausedParam]: paused ? 'true' : 'false',
+      sequentialDownload: sequentialDownload ? 'true' : 'false'
     }
   };
   if (savePath) {
@@ -107,7 +108,7 @@ exports.addTorrent = async function (clientUrl, cookie, torrentUrl, isSkipChecki
   return res;
 };
 
-exports.addTorrentByTorrentFile = async function (clientUrl, cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused) {
+exports.addTorrentByTorrentFile = async function (clientUrl, cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused, sequentialDownload) {
   const apiVersion = await exports.getCachedApiVersion(clientUrl, cookie);
   const pausedParam = apiVersion && exports.isVersionGreaterThan(apiVersion, '2.9.3') ? 'stopped' : 'paused';
 
@@ -123,7 +124,8 @@ exports.addTorrentByTorrentFile = async function (clientUrl, cookie, filepath, i
       upLimit: uploadLimit,
       dlLimit: downloadLimit,
       firstLastPiecePrio: firstLastPiecePrio + '',
-      [pausedParam]: paused ? 'true' : 'false'
+      [pausedParam]: paused ? 'true' : 'false',
+      sequentialDownload: sequentialDownload ? 'true' : 'false'
     }
   };
   if (savePath) {
@@ -143,6 +145,22 @@ exports.addTorrentByTorrentFile = async function (clientUrl, cookie, filepath, i
 exports.addTorrentTag = async function (clientUrl, cookie, hash, tag) {
   const message = {
     url: clientUrl + '/api/v2/torrents/addTags',
+    method: 'POST',
+    headers: {
+      cookie
+    },
+    formData: {
+      hashes: hash,
+      tags: tag
+    }
+  };
+  const res = await util.requestPromise(message);
+  return res;
+};
+
+exports.deleteTorrentTag = async function (clientUrl, cookie, hash, tag) {
+  const message = {
+    url: clientUrl + '/api/v2/torrents/removeTags',
     method: 'POST',
     headers: {
       cookie
@@ -197,6 +215,21 @@ exports.resumeTorrent = async (clientUrl, cookie, hash) => {
   }
   const message = {
     url: clientUrl + endpoint,
+    method: 'POST',
+    headers: {
+      cookie
+    },
+    formData: {
+      hashes: hash
+    }
+  };
+  const res = await util.requestPromise(message);
+  return res;
+};
+
+exports.recheckTorrent = async (clientUrl, cookie, hash) => {
+  const message = {
+    url: clientUrl + '/api/v2/torrents/recheck',
     method: 'POST',
     headers: {
       cookie
