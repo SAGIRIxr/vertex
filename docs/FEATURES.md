@@ -56,4 +56,4 @@
 ## 构建
 
 镜像通过 GitHub Actions 构建, 需在仓库 Secrets 配置
-`DOCKER_USERNAME` / `DOCKER_PASSWORD` (Docker Hub 账号)。
+`DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` (Docker Hub 账号)。
