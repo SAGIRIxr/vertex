@@ -25,10 +25,10 @@ jobs:
         TIMEVERSION=$(TZ=Asia/Shanghai date -d $CI_COMMIT_TIMESTAMP "+%Y.%m.%d")
         echo "CI_COMMIT_BRANCH=$CI_COMMIT_BRANCH" >> $GITHUB_ENV
         echo "CI_COMMIT_SHA=${{ github.event.head_commit.id }}" >> $GITHUB_ENV
-        echo "IMAGE_TAG_LATEST=lswl/vertex:latest" >> $GITHUB_ENV
+        echo "IMAGE_TAG_LATEST=${{ secrets.DOCKER_USERNAME }}/vertex:latest" >> $GITHUB_ENV
         echo "DOCKER_BUILDKIT=1" >> $GITHUB_ENV
-        echo "IMAGE_TAG_BRANCH=lswl/vertex:$CI_COMMIT_BRANCH" >> $GITHUB_ENV
-        echo "IMAGE_TAG_TIMEVERSION=lswl/vertex:$TIMEVERSION" >> $GITHUB_ENV
+        echo "IMAGE_TAG_BRANCH=${{ secrets.DOCKER_USERNAME }}/vertex:$CI_COMMIT_BRANCH" >> $GITHUB_ENV
+        echo "IMAGE_TAG_TIMEVERSION=${{ secrets.DOCKER_USERNAME }}/vertex:$TIMEVERSION" >> $GITHUB_ENV
     - name: Install Dependencies
       run: |
         npm i --save-dev
