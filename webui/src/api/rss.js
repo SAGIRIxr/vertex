@@ -28,5 +28,13 @@ export default {
   mikanPush: async (body) => {
     const url = '/api/rss/mikanPush';
     return await post(url, body);
+  },
+  listReseedQueue: async () => {
+    const url = '/api/rss/listReseedQueue?_=' + Math.random();
+    return await get(url);
+  },
+  deleteReseedQueue: async (id) => {
+    const url = '/api/rss/deleteReseedQueue';
+    return await post(url, { id });
   }
 };

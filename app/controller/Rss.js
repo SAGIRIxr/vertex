@@ -138,5 +138,37 @@ class Rss {
       });
     }
   };
+
+  async listReseedQueue (req, res) {
+    try {
+      res.send({
+        success: true,
+        data: global.reseedQueue.list()
+      });
+    } catch (e) {
+      logger.error(e);
+      res.send({
+        success: false,
+        message: e.message
+      });
+    }
+  };
+
+  async deleteReseedQueue (req, res) {
+    const options = req.body;
+    try {
+      await global.reseedQueue.remove(options.id);
+      res.send({
+        success: true,
+        message: '已放弃等待辅种'
+      });
+    } catch (e) {
+      logger.error(e);
+      res.send({
+        success: false,
+        message: e.message
+      });
+    }
+  };
 }
 module.exports = Rss;

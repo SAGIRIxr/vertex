@@ -202,29 +202,47 @@ class Rss {
   }
 
   async _pushTorrent (torrent, _client, adjust = false) {
-    if (this._rss.auxiliaryTorrent && this.autoReseed && torrent.hash.indexOf('fakehash') === -1) {
-      for (const _torrent of _client.maindata.torrents) {
-        if (+_torrent.size === +torrent.size && +_torrent.completed === +_torrent.size) {
-          const bencodeInfo = await rss.getTorrentNameByBencode(torrent.url);
-          if (_torrent.name === bencodeInfo.name && _torrent.hash !== bencodeInfo.hash) {
-            try {
-              this.addCount += 1;
-              await _client.addTorrent(torrent.url, torrent.hash, true, this.uploadLimit, this.downloadLimit, _torrent.savePath, this.category);
-              await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, category, link, record_time, add_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [torrent.hash, torrent.name, torrent.size, this.id, this.category, torrent.link, moment().unix(), moment().unix(), 1, '辅种']);
-              await this.ntf.addTorrent(this._rss, _client, torrent);
-              logger.watch(this.alias, `种子名称：${torrent.name} 辅种成功,已有的完成种子,跳过校验`);
-              return;
-            } catch (error) {
-              logger.error(this.alias, '下载器', _client, '添加种子', torrent.name, '失败\n', error);
-              await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, category, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [torrent.hash, torrent.name, torrent.size, this.id, this.category, torrent.link, moment().unix(), 3, '辅种失败']);
-              await this.ntf.addTorrentError(this._rss, _client, torrent);
-              logger.watch(this.alias, `种子名称：${torrent.name} 辅种失败`);
-            }
+    if (this._rss.auxiliaryTorrent) {
+      // 仅辅种模式: 只做跳校验/自动校验辅种, 辅不了的一律拒绝, 不走普通添加
+      let bencodeInfo;
+      try {
+        bencodeInfo = await rss.getTorrentNameByBencode(torrent.url);
+      } catch (e) {
+        logger.error(this.alias, '辅种时获取种子文件失败, 下轮重试:', torrent.name, '\n', e.message);
+        return;
+      }
+      if (bencodeInfo.exists) {
+        for (const _torrent of _client.maindata.torrents) {
+          if (+_torrent.size !== +torrent.size || +_torrent.completed !== +_torrent.size || _torrent.name !== bencodeInfo.name) continue;
+          if (_torrent.hash === bencodeInfo.hash) {
+            await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
+              [torrent.hash, torrent.name, torrent.size, this.id, torrent.link, moment().unix(), 2, '拒绝原因: 辅种取消,下载器中已存在此种子']);
+            logger.watch(this.alias, `种子名称：${torrent.name} 辅种取消,下载器中已存在此种子`);
+            return;
           }
+          try {
+            this.addCount += 1;
+            await _client.addTorrent(torrent.url, torrent.hash, !!this.autoReseed, this.uploadLimit, this.downloadLimit, _torrent.savePath, this.category);
+            await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, category, link, record_time, add_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+              [torrent.hash, torrent.name, torrent.size, this.id, this.category, torrent.link, moment().unix(), moment().unix(), 1, '辅种']);
+            await this.ntf.addTorrent(this._rss, _client, torrent);
+            logger.watch(this.alias, `种子名称：${torrent.name} 辅种成功,已有的完成种子${this.autoReseed ? ',跳过校验' : ',自动校验'}`);
+          } catch (error) {
+            logger.error(this.alias, '下载器', _client.alias, '添加种子', torrent.name, '失败\n', error);
+            await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, category, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+              [torrent.hash, torrent.name, torrent.size, this.id, this.category, torrent.link, moment().unix(), 3, '辅种失败']);
+            await this.ntf.addTorrentError(this._rss, _client, torrent);
+            logger.watch(this.alias, `种子名称：${torrent.name} 辅种失败`);
+          }
+          return;
         }
       }
+      const reason = bencodeInfo.exists ? '拒绝原因: 辅种失败,文件名不匹配' : '拒绝原因: 辅种失败,获取种子文件失败';
+      await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
+        [torrent.hash, torrent.name, torrent.size, this.id, torrent.link, moment().unix(), 2, reason]);
+      await this.ntf.rejectTorrent(this._rss, undefined, torrent, reason);
+      logger.watch(this.alias, `种子名称：${torrent.name} ${reason}`);
+      return;
     }
     if (!this.onlyReseed) {
       let speed;
@@ -423,17 +441,31 @@ class Rss {
         await this.ntf.rejectTorrent(this._rss, undefined, torrent, '拒绝原因: 最长休眠时间');
         continue;
       }
-      // 首选下载器调整
+      let reject = false;
+      for (const rejectRule of this.rejectRules) {
+        if (this._fitRule(rejectRule, torrent)) {
+          await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
+            [torrent.hash, torrent.name, torrent.size, this.id, torrent.link, moment().unix(), 2, `拒绝规则: ${rejectRule.alias}`]);
+          await this.ntf.rejectTorrent(this._rss, undefined, torrent, `拒绝规则: ${rejectRule.alias}`);
+          reject = true;
+          break;
+        }
+      }
+      if (reject) continue;
+      // 首选下载器调整, 优先选择已完成的同体积种子, 否则选进度最高的
       let sizeClient;
       let exisTtorrent;
       if (this._rss.adjustFirstClient) {
         for (const client of availableClients) {
           if (!client || !client.status) continue;
           for (const _torrent of client.maindata.torrents) {
-            if (+_torrent.size === +torrent.size) {
+            if (+_torrent.size !== +torrent.size) continue;
+            const _completed = +_torrent.completed === +_torrent.size;
+            const existCompleted = exisTtorrent && +exisTtorrent.completed === +exisTtorrent.size;
+            if (!exisTtorrent || (_completed && !existCompleted) ||
+              (!_completed && !existCompleted && _torrent.progress > exisTtorrent.progress)) {
               sizeClient = client;
               exisTtorrent = _torrent;
-              break;
             }
           }
         }
@@ -441,7 +473,42 @@ class Rss {
       let selectClient;
       let adjusted = false;
       if (sizeClient) {
-        if (this._rss.auxiliaryTorrent && exisTtorrent.progress < this._rss.auxiliaryProgress) {
+        if (this._rss.auxiliaryTorrent && +exisTtorrent.completed !== +exisTtorrent.size) {
+          if (exisTtorrent.progress >= +this._rss.auxiliaryProgress) {
+            // 达到等待阈值, 进入等待辅种队列, 完成后由队列处理器辅入
+            if (global.reseedQueue.hasTorrent(torrent.hash)) continue;
+            let bencodeInfo;
+            try {
+              bencodeInfo = await rss.getTorrentNameByBencode(torrent.url);
+            } catch (e) {
+              logger.error(this.alias, '等待辅种入队时获取种子文件失败, 下轮重试:', torrent.name, '\n', e.message);
+              continue;
+            }
+            if (!bencodeInfo.exists || bencodeInfo.name !== exisTtorrent.name) {
+              await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
+                [torrent.hash, torrent.name, torrent.size, this.id, torrent.link, moment().unix(), 2, '拒绝原因: 辅种失败,文件名不匹配']);
+              await this.ntf.rejectTorrent(this._rss, undefined, torrent, '拒绝原因: 辅种失败,文件名不匹配');
+              logger.watch(this.alias, `种子名称：${torrent.name} 辅种失败,文件名不匹配`);
+              continue;
+            }
+            if (global.reseedQueue.hasTorrent(torrent.hash, bencodeInfo.hash)) continue;
+            global.reseedQueue.add({
+              rssId: this.id,
+              rssAlias: this.alias,
+              clientIds: [...this.clientArr],
+              clientAlias: sizeClient.alias,
+              torrent: { name: torrent.name, size: torrent.size, url: torrent.url, link: torrent.link, hash: torrent.hash },
+              bencodeName: bencodeInfo.name,
+              bencodeHash: bencodeInfo.hash,
+              progress: exisTtorrent.progress,
+              skipChecking: !!this.autoReseed,
+              uploadLimit: this.uploadLimit,
+              downloadLimit: this.downloadLimit,
+              category: this.category,
+              timeout: +this._rss.auxiliaryTimeout || 15
+            });
+            continue;
+          }
           await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
             [torrent.hash, torrent.name, torrent.size, this.id, torrent.link, moment().unix(), 2, `拒绝原因: 辅种失败,已有的种子进度为${Math.round(exisTtorrent.progress * 100)}% ,未达设置进度`]);
           await this.ntf.rejectTorrent(this._rss, undefined, torrent, `拒绝原因: 辅种失败,已有的种子进度为${Math.round(exisTtorrent.progress * 100)}% ,未达设置进度`);
@@ -469,19 +536,7 @@ class Rss {
         logger.error(this.alias, '无可用下载器');
         continue;
       }
-      let reject = false;
-      for (const rejectRule of this.rejectRules) {
-        if (this._fitRule(rejectRule, torrent)) {
-          await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
-            [torrent.hash, torrent.name, torrent.size, this.id, torrent.link, moment().unix(), 2, `拒绝规则: ${rejectRule.alias}`]);
-          await this.ntf.rejectTorrent(this._rss, undefined, torrent, `拒绝规则: ${rejectRule.alias}`);
-          reject = true;
-          break;
-        }
-      }
-      if (!reject) {
-        await this._pushTorrent(torrent, selectClient, adjusted);
-      }
+      await this._pushTorrent(torrent, selectClient, adjusted);
     }
     this.lastRssTime = moment().unix();
   }

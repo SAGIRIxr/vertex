@@ -202,6 +202,8 @@ module.exports = function (app, express, router) {
   router.post('/rss/deleteRecord', ctrl.Rss.deleteRecord);
   router.post('/rss/mikanSearch', ctrl.Rss.mikanSearch);
   router.post('/rss/mikanPush', ctrl.Rss.mikanPush);
+  router.get('/rss/listReseedQueue', ctrl.Rss.listReseedQueue);
+  router.post('/rss/deleteReseedQueue', ctrl.Rss.deleteReseedQueue);
 
   router.get('/subscribe/list', ctrl.Douban.list);
   router.post('/subscribe/add', ctrl.Douban.add);

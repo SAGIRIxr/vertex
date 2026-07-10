@@ -18,6 +18,7 @@ const Douban = require('./common/Douban');
 const Site = require('./common/Site');
 const Watch = require('./common/Watch');
 const IRC = require('./common/IRC');
+const Reseed = require('./common/Reseed');
 
 const sites = require('./libs/site');
 const logger = require('./libs/logger');
@@ -108,6 +109,7 @@ const init = function () {
   global.runningWatch = {};
   global.runningIRC = {};
   global.startTime = moment().unix();
+  global.reseedQueue = new Reseed();
   initPush();
   for (const client of util.listClient()) {
     if (client.enable) {

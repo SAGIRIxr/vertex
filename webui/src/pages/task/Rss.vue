@@ -285,17 +285,24 @@
         </a-form-item>
         <a-form-item
           v-if="rss.auxiliaryTorrent"
-          label="仅辅种-辅种进度"
+          label="仅辅种-等待进度"
           name="auxiliaryProgress"
-          extra="触发辅种进度, 已有种子进度达到此值才辅种, 如 0.9 或 1"
+          extra="已完成的种子立即辅种; 进度达到此值但未完成的, 等待其完成后自动辅种; 低于此值的直接拒绝. 如 0.8"
           :rules="[{ required: true, message: '${label}不可为空! ' }]">
           <a-input size="small" v-model:value="rss.auxiliaryProgress"/>
+        </a-form-item>
+        <a-form-item
+          v-if="rss.auxiliaryTorrent"
+          label="仅辅种-等待超时"
+          name="auxiliaryTimeout"
+          extra="等待本地种子完成的最长时间, 单位分钟, 超时后写入拒绝记录, 默认 15. 等待中的种子在 RSS 历史页面查看">
+          <a-input size="small" v-model:value="rss.auxiliaryTimeout"/>
         </a-form-item>
         <a-form-item
           v-if="rss.adjustFirstClient"
           label="跳校验"
           name="autoReseed"
-          extra="跳校验, 有已完成的相同种子, 跳过校验">
+          extra="勾选后辅种时跳过校验立即做种; 不勾选则以本地种子的路径添加, 由下载器自动校验后做种">
           <a-checkbox v-model:checked="rss.autoReseed">跳校验</a-checkbox>
         </a-form-item>
         <a-form-item
@@ -480,7 +487,9 @@ export default {
         rejectRules: [],
         reseedClients: [],
         rssUrls: [''],
-        adjustFirstClient: false
+        adjustFirstClient: false,
+        auxiliaryProgress: 0.8,
+        auxiliaryTimeout: 15
       },
       loading: true,
       registCode: []
