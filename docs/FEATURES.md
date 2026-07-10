@@ -52,6 +52,9 @@
 
 - qBittorrent 客户端新增 `removeTags` (删除种子标签)、`recheck` (重新校验) 接口封装
 - `lemon` 站点移出 RSS 长缓存名单 (恢复默认 40 秒缓存)
+- 新装实例默认主题为 follow, 仪表盘默认仅显示下载器与 Tracker,
+  默认隐藏订阅/豆瓣/链接工具等与刷流无关的菜单 (见 `app/config/setting.json`,
+  可在 设置-菜单设置 中随时改回)
 
 ## 构建
 

@@ -273,21 +273,21 @@
         <a-form-item
           label="调整首选下载器"
           name="adjustFirstClient"
-          extra="调整首选下载器, 优先将种子添加至有相同大小的种子的下载器(如果你知道你在干什么)">
+          extra="调整首选下载器, 优先将种子添加至有相同大小的种子的下载器">
           <a-checkbox v-model:checked="rss.adjustFirstClient">调整首选下载器</a-checkbox>
         </a-form-item>
         <a-form-item
           v-if="rss.adjustFirstClient"
           label="仅辅种"
           name="auxiliaryTorrent"
-          extra="仅辅种, 只添加至已有这个种子且种子进度大于等于设置的进度的下载器,其他种子全部抛弃(如果你知道你在干什么)">
+          extra="仅辅种, 只添加至已有这个种子且种子进度大于等于设置的进度的下载器,其他种子全部抛弃">
           <a-checkbox v-model:checked="rss.auxiliaryTorrent">仅辅种</a-checkbox>
         </a-form-item>
         <a-form-item
           v-if="rss.auxiliaryTorrent"
           label="仅辅种-辅种进度"
           name="auxiliaryProgress"
-          extra="触发辅种进度, 如0.9或者1, 不懂的填1即可(如果你知道你在干什么)"
+          extra="触发辅种进度, 已有种子进度达到此值才辅种, 如 0.9 或 1"
           :rules="[{ required: true, message: '${label}不可为空! ' }]">
           <a-input size="small" v-model:value="rss.auxiliaryProgress"/>
         </a-form-item>
@@ -295,7 +295,7 @@
           v-if="rss.adjustFirstClient"
           label="跳校验"
           name="autoReseed"
-          extra="跳校验, 有已完成的相同种子, 跳过校验(如果你知道你在干什么!!!)">
+          extra="跳校验, 有已完成的相同种子, 跳过校验">
           <a-checkbox v-model:checked="rss.autoReseed">跳校验</a-checkbox>
         </a-form-item>
         <a-form-item

@@ -1,1 +1,29 @@
-{}
+{
+  "theme": "follow",
+  "dashboardContent": [
+    "downloader",
+    "tracker"
+  ],
+  "menu": [
+    "/rule/link",
+    "/task/subscribe",
+    "/task/watchCategory",
+    "/task/link",
+    "/task/bulkLink",
+    "/subscribe",
+    "/subscribe/list",
+    "/subscribe/search",
+    "/subscribe/add",
+    "/mix",
+    "/mix/search",
+    "/mix/downloader",
+    "/history/subscribe",
+    "/history/watchCategory",
+    "/tool/mikanHistory",
+    "/tool/pathGenerator",
+    "/tool/clientLog",
+    "/guide",
+    "/guide/rss",
+    "/guide/subscribe"
+  ]
+}

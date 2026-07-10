@@ -61,7 +61,7 @@ class Client {
         }
       }
     }
-    if (this._client.autoRecheck) {
+    if (this._client.autoRecheck && this._client.recheckCron) {
       this.autoRecheckJob = cron.schedule(this._client.recheckCron, () => this.autoRecheck());
     }
 
@@ -483,11 +483,11 @@ class Client {
   };
 
   async autoRecheck () {
-    const categoryList = this._client.categoryList;
+    const categoryList = this._client.categoryList || [];
     const minProgress = this._client.minProgressDifference;
     const minUploadSpeed = this._client.minUploadProtection;
     const stateList = ['checkingDL', 'checkingUP', 'moving'];
-    if (!this.status) {
+    if (!this.status || !this.maindata) {
       return;
     }
     const torrents = this.maindata.torrents;
@@ -500,22 +500,23 @@ class Client {
     });
     for (const torrents of Object.values(sizeMap)) {
       if (!torrents) continue;
-      let minProgressTorrent = torrents[0];
-      let maxProgressTorrent = torrents[0];
+      let minProgressTorrent;
+      let maxProgressTorrent;
       for (const t of torrents) {
         if (!t) continue;
         if (t.uploadSpeed >= minUploadSpeed || categoryList.includes(t.category) || stateList.includes(t.state)) continue;
-        if (t.progress < minProgressTorrent.progress) {
+        if (!minProgressTorrent || t.progress < minProgressTorrent.progress) {
           minProgressTorrent = t;
         }
-        if (t.progress > maxProgressTorrent.progress) {
+        if (!maxProgressTorrent || t.progress > maxProgressTorrent.progress) {
           maxProgressTorrent = t;
         }
       }
+      if (!minProgressTorrent || !maxProgressTorrent) continue;
       const progressDifference = maxProgressTorrent.progress - minProgressTorrent.progress;
       if (progressDifference > minProgress) {
         await this.reannounceTorrent(minProgressTorrent);
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
         await this.recheckTorrent(minProgressTorrent.hash);
         logger.sc(`下载器：[${this.alias}]\n分类:[${minProgressTorrent.category}]和[${maxProgressTorrent.category}]大小相同且进度差距${Math.round(progressDifference * 100)}% ,校验[${minProgressTorrent.category}]分类的种子\n种子名: ${minProgressTorrent.name}\n`);
       }

@@ -201,7 +201,7 @@ class Rss {
     this.ntf = new Push(this.notify);
   }
 
-  async _pushTorrent (torrent, _client) {
+  async _pushTorrent (torrent, _client, adjust = false) {
     if (this._rss.auxiliaryTorrent && this.autoReseed && torrent.hash.indexOf('fakehash') === -1) {
       for (const _torrent of _client.maindata.torrents) {
         if (+_torrent.size === +torrent.size && +_torrent.completed === +_torrent.size) {
@@ -338,7 +338,7 @@ class Rss {
         savePath = savePath.replace('{RANDOM}', util.uuid.v4().replace(/-/g, ''));
       }
       const category = fitRule.category || this.category;
-      const client = fitRule.client && !_client.adjust ? global.runningClient[fitRule.client] : _client;
+      const client = fitRule.client && !adjust ? global.runningClient[fitRule.client] : _client;
       try {
         let truehash = '';
         this.addCount += 1;
@@ -439,6 +439,7 @@ class Rss {
         }
       }
       let selectClient;
+      let adjusted = false;
       if (sizeClient) {
         if (this._rss.auxiliaryTorrent && exisTtorrent.progress < this._rss.auxiliaryProgress) {
           await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -448,8 +449,8 @@ class Rss {
           continue;
         }
         selectClient = sizeClient;
-        selectClient.adjust = true;
-        logger.watch(this._rss.alias, `首选下载器调整,原下载器:${firstClient.alias},新下载器:${sizeClient.alias} \n 种子名称：${torrent.name}\n`);
+        adjusted = true;
+        logger.watch(this._rss.alias, `首选下载器调整,原下载器:${firstClient ? firstClient.alias : '无'},新下载器:${sizeClient.alias} \n 种子名称：${torrent.name}\n`);
       } else {
         if (this._rss.auxiliaryTorrent) {
           await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -479,7 +480,7 @@ class Rss {
         }
       }
       if (!reject) {
-        await this._pushTorrent(torrent, selectClient);
+        await this._pushTorrent(torrent, selectClient, adjusted);
       }
     }
     this.lastRssTime = moment().unix();
