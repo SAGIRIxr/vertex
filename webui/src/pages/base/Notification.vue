@@ -78,7 +78,16 @@
             <a-select-option value="slack">Slack</a-select-option>
             <a-select-option value="ntfy">Ntfy</a-select-option>
             <a-select-option value="webhook">Webhook</a-select-option>
+            <a-select-option value="pushplus">PushPlus</a-select-option>
           </a-select>
+        </a-form-item>
+        <a-form-item
+          v-if="notification.type === 'pushplus'"
+          label="Token"
+          name="pushPlusToken"
+          extra="PushPlus 用户 Token, 在 pushplus.plus 个人中心获取"
+          :rules="[{ required: true, message: '${label}不可为空! ' }]">
+          <a-input size="small" v-model:value="notification.pushPlusToken"/>
         </a-form-item>
         <a-form-item
           v-if="notification.type === 'wechat'"

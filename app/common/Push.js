@@ -5,13 +5,15 @@ const Slack = require('../libs/push/slack');
 const Telegram = require('../libs/push/telegram');
 const Ntfy = require('../libs/push/ntfy');
 const Webhook = require('../libs/push/webhook');
+const PushPlus = require('../libs/push/pushplus');
 
 const PUSH = {
   wechat: Wechat,
   slack: Slack,
   telegram: Telegram,
   ntfy: Ntfy,
-  webhook: Webhook
+  webhook: Webhook,
+  pushplus: PushPlus
 };
 
 class Push {
@@ -26,7 +28,7 @@ class Push {
       'pushWeChat', 'pushWeChatSelector', 'modifyWechatMenu', 'edit',
       'pushPlexStartOrStopToSlack', 'pushEmbyStartOrStopToSlack', 'pushSlackRaw',
       'openSlackView', 'pushSlack',
-      'pushTelegram', 'pushNtfy', 'pushWebhook'
+      'pushTelegram', 'pushNtfy', 'pushWebhook', 'pushPushPlus', 'push'
     ];
     this.pushType = this.pushType.concat(additionPushType);
     if (this.push && !push.dryrun) {
@@ -60,7 +62,7 @@ class Push {
     }
     try {
       if (type === 'push') {
-        return await (this.p.pushWeChat || this.p.pushSlack || this.p.pushTelegram || this.p.pushNtfy || this.p.pushWebhook)(...args);
+        return await (this.p.pushWeChat || this.p.pushSlack || this.p.pushTelegram || this.p.pushNtfy || this.p.pushWebhook || this.p.pushPushPlus).call(this.p, ...args);
       }
       return await this.p[type](...args);
     } catch (e) {

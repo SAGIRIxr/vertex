@@ -202,6 +202,14 @@ module.exports = function (app, express, router) {
   router.post('/rss/deleteRecord', ctrl.Rss.deleteRecord);
   router.post('/rss/mikanSearch', ctrl.Rss.mikanSearch);
   router.post('/rss/mikanPush', ctrl.Rss.mikanPush);
+  router.get('/hzc/list', ctrl.Hzc.list);
+  router.post('/hzc/add', ctrl.Hzc.add);
+  router.post('/hzc/modify', ctrl.Hzc.modify);
+  router.post('/hzc/delete', ctrl.Hzc.delete);
+  router.get('/hzc/listState', ctrl.Hzc.listState);
+  router.post('/hzc/refresh', ctrl.Hzc.refresh);
+  router.post('/hzc/run', ctrl.Hzc.run);
+
   router.get('/rss/listReseedQueue', ctrl.Rss.listReseedQueue);
   router.get('/rss/reseedQueueStats', ctrl.Rss.reseedQueueStats);
   router.post('/rss/deleteReseedQueue', ctrl.Rss.deleteReseedQueue);

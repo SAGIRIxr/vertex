@@ -19,6 +19,7 @@ const Site = require('./common/Site');
 const Watch = require('./common/Watch');
 const IRC = require('./common/IRC');
 const Reseed = require('./common/Reseed');
+const Hzc = require('./common/Hzc');
 
 const sites = require('./libs/site');
 const logger = require('./libs/logger');
@@ -109,6 +110,7 @@ const init = function () {
   global.runningScript = {};
   global.runningWatch = {};
   global.runningIRC = {};
+  global.runningHzc = {};
   global.startTime = moment().unix();
   global.reseedQueue = new Reseed();
   initPush();
@@ -120,6 +122,14 @@ const init = function () {
   for (const rss of util.listRss()) {
     if (rss.enable) {
       global.runningRss[rss.id] = new Rss(rss);
+    }
+  }
+  const hzcDir = path.join(__dirname, './data/hzc');
+  if (!fs.existsSync(hzcDir)) fs.mkdirSync(hzcDir, { recursive: true });
+  for (const file of fs.readdirSync(hzcDir).filter(item => path.extname(item) === '.json')) {
+    const hzc = JSON.parse(fs.readFileSync(path.join(hzcDir, file), { encoding: 'utf-8' }));
+    if (hzc.enable) {
+      global.runningHzc[hzc.id] = new Hzc(hzc);
     }
   }
   for (const server of util.listServer()) {

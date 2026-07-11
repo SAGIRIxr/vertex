@@ -88,6 +88,10 @@ class UserMod {
           path: '/task/rss',
           icon: ['fas', 'rss']
         }, {
+          title: 'HZC自动重建',
+          path: '/task/hzc',
+          icon: ['fas', 'arrows-rotate']
+        }, {
           title: '订阅任务',
           path: '/task/subscribe',
           icon: ['fas', 'calendar-check']

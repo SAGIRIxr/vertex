@@ -23,6 +23,10 @@ if [ ! -d '/vertex/data/script' ]; then
   mkdir /vertex/data/script
 fi
 
+if [ ! -d '/vertex/data/hzc' ]; then
+  mkdir /vertex/data/hzc/stats -p
+fi
+
 if [ ! -d '/vertex/data/watch' ]; then
   mkdir /vertex/data/watch/set -p
 fi

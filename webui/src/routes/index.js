@@ -21,6 +21,7 @@ import RuleRss from '@/pages/rule/Rss';
 import RuleSelect from '@/pages/rule/Select';
 
 import TaskRss from '@/pages/task/Rss';
+import TaskHzc from '@/pages/task/Hzc';
 import TaskSubscribe from '@/pages/task/Subscribe';
 import TaskLink from '@/pages/task/Link';
 import TaskBulkLink from '@/pages/task/BulkLink';
@@ -277,6 +278,12 @@ const task = {
       component: TaskRss,
       meta: {
         title: 'Rss 任务 - 任务配置'
+      }
+    }, {
+      path: 'hzc',
+      component: TaskHzc,
+      meta: {
+        title: 'HZC自动重建 - 任务配置'
       }
     }, {
       path: 'subscribe',
