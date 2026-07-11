@@ -99,6 +99,7 @@ const init = function () {
   global.panelKey = setting.panelKey;
   global.jellyfinCover = setting.jellyfinCover;
   global.dataPath = setting.dataPath || '/';
+  global.reseedStatsDays = +setting.reseedStatsDays || 7;
   global.runningClient = {};
   global.runningRss = {};
   global.runningServer = {};

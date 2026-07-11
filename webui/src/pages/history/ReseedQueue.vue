@@ -15,7 +15,7 @@
         <span style="font-size: 16px; font-weight: bold;">等待辅种中</span>
         <span style="font-size: 12px; margin-left: 12px;">本地同体积种子完成后将自动辅入, 每 5 秒自动刷新。超时/放弃/成功的记录见 RSS 历史。</span>
         <div v-if="stats" style="font-size: 12px; margin-top: 4px;">
-          近 7 天: 辅种成功 {{ stats.success }} · 超时 {{ stats.timeout }} · 放弃 {{ stats.abandon }} · 其他 {{ stats.other }}<span v-if="stats.avgWait"> · 平均等待 {{ stats.avgWait }} 分钟</span>
+          近 {{ stats.days }} 天: 辅种成功 {{ stats.success }} · 超时 {{ stats.timeout }} · 放弃 {{ stats.abandon }} · 其他 {{ stats.other }}<span v-if="stats.avgWait"> · 平均等待 {{ stats.avgWait }} 分钟</span>
         </div>
       </template>
       <template #bodyCell="{ column, record }">

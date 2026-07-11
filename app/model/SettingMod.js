@@ -64,6 +64,7 @@ class SettingMod {
     global.background = options.background;
     global.tmdbApiKey = options.tmdbApiKey;
     global.dataPath = options.dataPath || '/';
+    global.reseedStatsDays = +options.reseedStatsDays || 7;
     global.wechatCover = options.wechatCover;
     global.embyCover = options.embyCover;
     global.plexCover = options.plexCover;

@@ -43,6 +43,12 @@
           <a-input size="small" v-model:value="setting.wechatProxy"/>
         </a-form-item>
         <a-form-item
+          label="辅种统计保留天数"
+          name="reseedStatsDays"
+          extra="等待辅种页面统计信息的保留与展示天数, 默认 7 天">
+          <a-input size="small" type="number" min="1" v-model:value="setting.reseedStatsDays"/>
+        </a-form-item>
+        <a-form-item
           label="隐藏报错提示"
           extra="进入首页后不提示报错信息">
           <a-checkbox v-model:checked="setting.ignoreError">启用</a-checkbox>
@@ -83,6 +89,7 @@ export default {
           loggerLevel: s.loggerLevel,
           telegramProxy: s.telegramProxy,
           wechatProxy: s.wechatProxy,
+          reseedStatsDays: s.reseedStatsDays || 7,
           ignoreError: s.ignoreError,
           ignoreDependCheck: s.ignoreDependCheck
         };

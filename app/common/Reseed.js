@@ -7,7 +7,6 @@ const logger = require('../libs/logger');
 
 const queuePath = path.join(__dirname, '../data/reseed-queue.json');
 const statsPath = path.join(__dirname, '../data/reseed-stats.json');
-const STATS_KEEP_SECONDS = 7 * 86400;
 
 class Reseed {
   constructor () {
@@ -46,10 +45,14 @@ class Reseed {
     return this.queue.some(item => +item.torrent.size === +torrent.size && item.bencodeName === torrent.name);
   }
 
+  _statsKeepDays () {
+    return +global.reseedStatsDays || 7;
+  }
+
   // result: success / timeout / abandon / exists / deleted / fail
   recordStat (result, waitSeconds = 0) {
     const now = moment().unix();
-    this.stats = this.stats.filter(i => now - i.time < STATS_KEEP_SECONDS);
+    this.stats = this.stats.filter(i => now - i.time < this._statsKeepDays() * 86400);
     this.stats.push({ time: now, result, wait: waitSeconds });
     try {
       fs.writeFileSync(statsPath, JSON.stringify(this.stats));
@@ -60,10 +63,12 @@ class Reseed {
 
   summary () {
     const now = moment().unix();
-    const events = this.stats.filter(i => now - i.time < STATS_KEEP_SECONDS);
+    const days = this._statsKeepDays();
+    const events = this.stats.filter(i => now - i.time < days * 86400);
     const count = result => events.filter(i => i.result === result).length;
     const waits = events.filter(i => i.result === 'success' && i.wait > 0).map(i => i.wait);
     return {
+      days,
       success: count('success'),
       timeout: count('timeout'),
       abandon: count('abandon'),
