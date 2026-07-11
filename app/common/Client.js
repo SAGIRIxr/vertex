@@ -331,11 +331,11 @@ class Client {
     }
   };
 
-  async addTorrent (torrentUrl, hash, isSkipChecking = false, uploadLimit = 0, downloadLimit = 0, savePath, category, autoTMM, paused) {
+  async addTorrent (torrentUrl, hash, isSkipChecking = false, uploadLimit = 0, downloadLimit = 0, savePath, category, autoTMM, paused, tags) {
     if (!this.status) {
       throw new Error('客户端' + this.alias + '当前状态为不可用');
     }
-    const { statusCode } = await this.client.addTorrent(this.clientUrl, this.cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused, this.sequentialDownload);
+    const { statusCode } = await this.client.addTorrent(this.clientUrl, this.cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused, this.sequentialDownload, tags);
     if (statusCode !== 200 && statusCode !== 202 && statusCode !== 204) {
       this.login();
       throw new Error('状态码: ' + statusCode);
@@ -359,8 +359,8 @@ class Client {
     }
   }
 
-  async addTorrentByTorrentFile (filepath, hash, isSkipChecking = false, uploadLimit = 0, downloadLimit = 0, savePath, category, autoTMM, paused) {
-    const { statusCode } = await this.client.addTorrentByTorrentFile(this.clientUrl, this.cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused, this.sequentialDownload);
+  async addTorrentByTorrentFile (filepath, hash, isSkipChecking = false, uploadLimit = 0, downloadLimit = 0, savePath, category, autoTMM, paused, tags) {
+    const { statusCode } = await this.client.addTorrentByTorrentFile(this.clientUrl, this.cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, this.firstLastPiecePrio, paused, this.sequentialDownload, tags);
     if (statusCode !== 200 && statusCode !== 202 && statusCode !== 204) {
       this.login();
       throw new Error('状态码: ' + statusCode);
@@ -439,6 +439,9 @@ class Client {
     const rejectDeleteHash = {};
     for (const torrent of torrents) {
       if (this.rejectDeleteRules.some(item => this._fitDeleteRule({ ...item }, torrent))) {
+        rejectDeleteHash[torrent.hash] = 1;
+      } else if (global.reseedQueue && global.reseedQueue.isProtected(torrent)) {
+        logger.debug('下载器', this.alias, '种子', torrent.name, '正在等待辅种, 跳过删种');
         rejectDeleteHash[torrent.hash] = 1;
       }
     }

@@ -222,15 +222,22 @@ class Rss {
           }
           try {
             this.addCount += 1;
-            await _client.addTorrent(torrent.url, torrent.hash, !!this.autoReseed, this.uploadLimit, this.downloadLimit, _torrent.savePath, this.category);
+            await _client.addTorrent(torrent.url, torrent.hash, !!this.autoReseed, this.uploadLimit, this.downloadLimit, _torrent.savePath, this.category, undefined, undefined, '辅种');
             await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, category, link, record_time, add_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
               [torrent.hash, torrent.name, torrent.size, this.id, this.category, torrent.link, moment().unix(), moment().unix(), 1, '辅种']);
+            if (global.reseedQueue) global.reseedQueue.recordStat('success', 0);
+            try {
+              await _client.addTorrentTag(_torrent.hash, '辅种源');
+            } catch (e) {
+              logger.error(this.alias, '本地种子打标签失败:', _torrent.name, '\n', e.message);
+            }
             await this.ntf.addTorrent(this._rss, _client, torrent);
             logger.watch(this.alias, `种子名称：${torrent.name} 辅种成功,已有的完成种子${this.autoReseed ? ',跳过校验' : ',自动校验'}`);
           } catch (error) {
             logger.error(this.alias, '下载器', _client.alias, '添加种子', torrent.name, '失败\n', error);
             await util.runRecord('INSERT INTO torrents (hash, name, size, rss_id, category, link, record_time, record_type, record_note) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
               [torrent.hash, torrent.name, torrent.size, this.id, this.category, torrent.link, moment().unix(), 3, '辅种失败']);
+            if (global.reseedQueue) global.reseedQueue.recordStat('fail', 0);
             await this.ntf.addTorrentError(this._rss, _client, torrent);
             logger.watch(this.alias, `种子名称：${torrent.name} 辅种失败`);
           }

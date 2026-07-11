@@ -154,6 +154,21 @@ class Rss {
     }
   };
 
+  async reseedQueueStats (req, res) {
+    try {
+      res.send({
+        success: true,
+        data: global.reseedQueue.summary()
+      });
+    } catch (e) {
+      logger.error(e);
+      res.send({
+        success: false,
+        message: e.message
+      });
+    }
+  };
+
   async deleteReseedQueue (req, res) {
     const options = req.body;
     try {

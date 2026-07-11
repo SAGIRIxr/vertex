@@ -33,6 +33,10 @@ export default {
     const url = '/api/rss/listReseedQueue?_=' + Math.random();
     return await get(url);
   },
+  reseedQueueStats: async () => {
+    const url = '/api/rss/reseedQueueStats?_=' + Math.random();
+    return await get(url);
+  },
   deleteReseedQueue: async (id) => {
     const url = '/api/rss/deleteReseedQueue';
     return await post(url, { id });

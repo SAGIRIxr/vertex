@@ -74,7 +74,7 @@ exports.isVersionGreaterThan = function (version, compareVersion) {
   return false;
 };
 
-exports.addTorrent = async function (clientUrl, cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused, sequentialDownload) {
+exports.addTorrent = async function (clientUrl, cookie, torrentUrl, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused, sequentialDownload, tags) {
   const apiVersion = await exports.getCachedApiVersion(clientUrl, cookie);
   const pausedParam = apiVersion && exports.isVersionGreaterThan(apiVersion, '2.9.3') ? 'stopped' : 'paused';
 
@@ -103,12 +103,15 @@ exports.addTorrent = async function (clientUrl, cookie, torrentUrl, isSkipChecki
   if (autoTMM) {
     message.formData.autoTMM = '' + autoTMM;
   }
+  if (tags) {
+    message.formData.tags = tags;
+  }
   const res = await util.requestPromise(message);
   logger.debug(clientUrl, '添加种子', torrentUrl, '\n返回信息', { body: res.body, statusCode: res.statusCode });
   return res;
 };
 
-exports.addTorrentByTorrentFile = async function (clientUrl, cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused, sequentialDownload) {
+exports.addTorrentByTorrentFile = async function (clientUrl, cookie, filepath, isSkipChecking, uploadLimit, downloadLimit, savePath, category, autoTMM, firstLastPiecePrio, paused, sequentialDownload, tags) {
   const apiVersion = await exports.getCachedApiVersion(clientUrl, cookie);
   const pausedParam = apiVersion && exports.isVersionGreaterThan(apiVersion, '2.9.3') ? 'stopped' : 'paused';
 
@@ -136,6 +139,9 @@ exports.addTorrentByTorrentFile = async function (clientUrl, cookie, filepath, i
   }
   if (autoTMM) {
     message.formData.autoTMM = '' + autoTMM;
+  }
+  if (tags) {
+    message.formData.tags = tags;
   }
   const res = await util.requestPromise(message);
   logger.debug(clientUrl, '添加种子', filepath, '\n返回信息', { body: res.body, statusCode: res.statusCode });
