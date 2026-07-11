@@ -4,14 +4,25 @@ const Rss = require('../common/Rss');
 
 const util = require('../libs/util');
 class RssMod {
+  // 未选择下载器的任务不允许处于启用状态, 强制停用并提示
+  _checkClientArr (rssSet) {
+    const hasClient = (rssSet.clientArr && rssSet.clientArr.length > 0) || rssSet.client;
+    if (!hasClient && rssSet.enable) {
+      rssSet.enable = false;
+      return ', 未选择下载器, 任务已自动停用';
+    }
+    return '';
+  };
+
   add (options) {
     const id = util.uuid.v4().split('-')[0];
     const rssSet = { ...options };
     rssSet.id = id;
+    const note = this._checkClientArr(rssSet);
     fs.writeFileSync(path.join(__dirname, '../data/rss/', id + '.json'), JSON.stringify(rssSet, null, 2));
     if (global.runningRss[id]) global.runningRss[id].destroy();
     if (rssSet.enable) global.runningRss[id] = new Rss(rssSet);
-    return '添加 Rss 成功';
+    return '添加 Rss 成功' + note;
   };
 
   delete (options) {
@@ -29,10 +40,11 @@ class RssMod {
     const rssSet = { ...options };
     rssSet.sameServerClients = rssSet.sameServerClients || [];
     rssSet.reseedClients = rssSet.reseedClients || [];
+    const note = this._checkClientArr(rssSet);
     fs.writeFileSync(path.join(__dirname, '../data/rss/', options.id + '.json'), JSON.stringify(rssSet, null, 2));
     if (global.runningRss[options.id]) global.runningRss[options.id].destroy();
     if (rssSet.enable) global.runningRss[options.id] = new Rss(rssSet);
-    return '修改 Rss 成功';
+    return '修改 Rss 成功' + note;
   };
 
   list () {

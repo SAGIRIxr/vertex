@@ -152,9 +152,8 @@ class Reseed {
     let found = false;
     for (const key of item.clientIds) {
       const client = global.runningClient[key];
-      if (!client) continue;
-      if (!client.status || !client.maindata) {
-        // 下载器暂时离线, 无法判断, 继续等待
+      if (!client || !client.status || !client.maindata) {
+        // 下载器停用或暂时离线, 无法判断, 继续等待, 超时兜底
         found = true;
         continue;
       }

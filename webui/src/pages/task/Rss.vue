@@ -70,8 +70,7 @@
         <a-form-item
           label="下载器"
           name="clientArr"
-          extra="选择下载器, 仅可选择已经启用的下载器"
-          :rules="[{ required: true, message: '${label}不可为空! ' }]">
+          extra="选择下载器, 仅可选择已经启用的下载器; 不选择任何下载器时任务将自动停用">
           <a-checkbox-group style="width: 100%;" v-model:value="rss.clientArr">
             <a-row>
               <a-col v-for="downloader of downloaders" :span="8" :key="downloader.id">
@@ -537,8 +536,8 @@ export default {
     },
     async modifyRss () {
       try {
-        await this.$api().rss.modify({ ...this.rss });
-        this.$message().success((this.rss.id ? '编辑' : '新增') + '成功, 列表正在刷新...');
+        const res = await this.$api().rss.modify({ ...this.rss });
+        this.$message().success((res.message || (this.rss.id ? '编辑' : '新增') + '成功') + ', 列表正在刷新...');
         setTimeout(() => this.listRss(), 1000);
         this.clearRss();
       } catch (e) {
@@ -555,9 +554,14 @@ export default {
       }
     },
     async enableTask (record) {
+      if (record.enable && (!record.clientArr || record.clientArr.length === 0)) {
+        record.enable = false;
+        this.$message().error('该任务未选择下载器, 请先编辑任务选择下载器');
+        return;
+      }
       try {
-        await this.$api().rss.modify({ ...record });
-        this.$message().success('修改成功, 列表正在刷新...');
+        const res = await this.$api().rss.modify({ ...record });
+        this.$message().success((res.message || '修改成功') + ', 列表正在刷新...');
         setTimeout(() => this.listRss(), 1000);
         this.clearRss();
       } catch (e) {

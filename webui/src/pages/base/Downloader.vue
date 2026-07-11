@@ -15,7 +15,7 @@
       </template>
       <template #bodyCell="{ column, record }">
         <template v-if="column.dataIndex === 'enable'">
-          <a-switch @change="enableDownloader(record)" :disabled="record.used" v-model:checked="record.enable" checked-children="启用" un-checked-children="禁用"/>
+          <a-switch @change="toggleDownloader(record)" v-model:checked="record.enable" checked-children="启用" un-checked-children="禁用"/>
         </template>
         <template v-if="column.dataIndex === 'autoDelete'">
           <a-tag color="success" v-if="record.autoDelete">启用</a-tag>
@@ -60,6 +60,15 @@
         </template>
       </template>
     </a-table>
+    <a-modal v-model:visible="disableModalVisible" title="停用确认" :closable="false" :maskClosable="false">
+      <p>该下载器仍被以下 RSS 任务引用:</p>
+      <p style="font-weight: bold;">{{ disableModalTasks.length ? disableModalTasks.join(' / ') : '(订阅/监控分类等其他组件)' }}</p>
+      <p>停用后这些任务将暂时少一个可用下载器; 若任务的下载器全部不可用, 该任务会自动跳过且不写拒绝记录, 重新启用后自动恢复。</p>
+      <template #footer>
+        <a-button @click="cancelDisable">取消</a-button>
+        <a-button type="primary" danger @click="confirmDisable">确认停用</a-button>
+      </template>
+    </a-modal>
     <a-divider></a-divider>
     <div style="font-size: 16px; font-weight: bold; padding-left: 8px;">新增 | 编辑下载器</div>
     <div style="text-align: left; ">
@@ -85,7 +94,7 @@
           name="enable"
           extra="选择是否启用下载器"
           :rules="[{ required: true, message: '${label}不可为空! ' }]">
-          <a-checkbox :disabled="downloader.used" v-model:checked="downloader.enable">启用</a-checkbox>
+          <a-checkbox v-model:checked="downloader.enable">启用</a-checkbox>
         </a-form-item>
         <a-form-item
           label="下载器类型"
@@ -368,7 +377,10 @@ export default {
         categoryList: ['keep']
       },
       loading: true,
-      registCode: []
+      registCode: [],
+      disableModalVisible: false,
+      disableModalTasks: [],
+      disableModalRecord: null
     };
   },
   methods: {
@@ -446,6 +458,34 @@ export default {
       } catch (e) {
         this.$message().error(e.message);
       }
+    },
+    async toggleDownloader (record) {
+      // 停用被引用的下载器时先弹出确认, 引用原样保留, 重新启用后自动恢复
+      if (!record.enable && record.used) {
+        let tasks = [];
+        try {
+          tasks = (await this.$api().rss.list()).data
+            .filter(item => (item.clientArr || []).includes(record.id) || (item.reseedClients || []).includes(record.id))
+            .map(item => item.alias);
+        } catch (e) {
+          tasks = [];
+        }
+        this.disableModalTasks = tasks;
+        this.disableModalRecord = record;
+        this.disableModalVisible = true;
+        return;
+      }
+      await this.enableDownloader(record);
+    },
+    async confirmDisable () {
+      this.disableModalVisible = false;
+      await this.enableDownloader(this.disableModalRecord);
+      this.disableModalRecord = null;
+    },
+    cancelDisable () {
+      if (this.disableModalRecord) this.disableModalRecord.enable = true;
+      this.disableModalRecord = null;
+      this.disableModalVisible = false;
     },
     goto (record) {
       window.open(`/proxy/client/${record.id}/`);

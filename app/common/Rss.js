@@ -408,6 +408,14 @@ class Rss {
   }
 
   async rss (_torrents) {
+    // 下载器全部停用/离线时跳过本轮, 不写拒绝记录, 恢复后自动继续
+    const usableClients = this.clientArr
+      .map(item => global.runningClient[item])
+      .filter(item => !!item && !!item.status && !!item.maindata);
+    if (usableClients.length === 0) {
+      logger.watch(this.alias, '所有下载器均不可用, 跳过本轮 RSS 任务');
+      return;
+    }
     let torrents = [];
     if (_torrents) {
       torrents = _torrents;
