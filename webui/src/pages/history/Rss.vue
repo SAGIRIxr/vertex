@@ -3,41 +3,6 @@
   <a-divider></a-divider>
   <div class="rss" >
     <a-table
-      v-if="reseedQueue.length !== 0"
-      :style="`font-size: ${isMobile() ? '12px': '14px'}; margin-bottom: 24px;`"
-      :columns="reseedColumns"
-      size="small"
-      :data-source="reseedQueue"
-      :pagination="false"
-      :scroll="{ x: 960 }"
-    >
-      <template #title>
-        <span style="font-size: 16px; font-weight: bold;">等待辅种中</span>
-      </template>
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'size'">
-          {{ $formatSize(record.torrent.size) }}
-        </template>
-        <template v-if="column.dataIndex === 'name'">
-          {{ record.torrent.name }}
-        </template>
-        <template v-if="column.dataIndex === 'progress'">
-          {{ Math.round(record.progress * 100) }}%
-        </template>
-        <template v-if="column.dataIndex === 'expireAt'">
-          {{ Math.max(0, Math.ceil((record.expireAt - $moment().unix()) / 60)) }} 分钟
-        </template>
-        <template v-if="column.title === '操作'">
-          <a-popover title="放弃?" trigger="click" :overlayStyle="{ width: '84px', overflow: 'hidden' }">
-            <template #content>
-              <a-button type="primary" danger @click="deleteReseedQueue(record)" size="small">放弃</a-button>
-            </template>
-            <a style="color: red">放弃</a>
-          </a-popover>
-        </template>
-      </template>
-    </a-table>
-    <a-table
       :style="`font-size: ${isMobile() ? '12px': '14px'};`"
       :columns="columns"
       size="small"
@@ -142,47 +107,13 @@ export default {
       pageSize: qs.length,
       showSizeChanger: false
     };
-    const reseedColumns = [
-      {
-        title: '种子名称',
-        dataIndex: 'name',
-        width: 120
-      }, {
-        title: '种子大小',
-        dataIndex: 'size',
-        width: 24
-      }, {
-        title: 'RSS',
-        dataIndex: 'rssAlias',
-        width: 24
-      }, {
-        title: '目标下载器',
-        dataIndex: 'clientAlias',
-        width: 24
-      }, {
-        title: '本地进度',
-        dataIndex: 'progress',
-        width: 24
-      }, {
-        title: '剩余等待',
-        dataIndex: 'expireAt',
-        width: 24
-      }, {
-        title: '操作',
-        dataIndex: 'option',
-        width: 24
-      }
-    ];
     return {
       loading: true,
       pagination,
       columns,
-      reseedColumns,
       qs,
       torrents: [],
-      rssList: [],
-      reseedQueue: [],
-      reseedTimer: null
+      rssList: []
     };
   },
   methods: {
@@ -234,34 +165,11 @@ export default {
       } catch (e) {
         await this.$message().error(e.message);
       }
-    },
-    async listReseedQueue () {
-      try {
-        const res = await this.$api().rss.listReseedQueue();
-        this.reseedQueue = res.data;
-      } catch (e) {
-        this.reseedQueue = [];
-      }
-    },
-    async deleteReseedQueue (record) {
-      try {
-        await this.$api().rss.deleteReseedQueue(record.id);
-        this.$message().success('已放弃, 列表刷新中....');
-        this.listReseedQueue();
-        this.listHistory();
-      } catch (e) {
-        await this.$message().error(e.message);
-      }
     }
   },
   async mounted () {
     this.listHistory();
     this.listRss();
-    this.listReseedQueue();
-    this.reseedTimer = setInterval(() => this.listReseedQueue(), 5000);
-  },
-  beforeUnmount () {
-    if (this.reseedTimer) clearInterval(this.reseedTimer);
   }
 };
 </script>

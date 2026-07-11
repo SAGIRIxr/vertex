@@ -295,7 +295,7 @@
           v-if="rss.auxiliaryTorrent"
           label="仅辅种-等待超时"
           name="auxiliaryTimeout"
-          extra="等待本地种子完成的最长时间, 单位分钟, 超时后写入拒绝记录, 默认 15. 等待中的种子在 RSS 历史页面查看">
+          extra="等待本地种子完成的最长时间, 单位分钟, 超时后写入拒绝记录, 默认 15. 等待中的种子在 任务历史-等待辅种 页面查看">
           <a-input size="small" v-model:value="rss.auxiliaryTimeout"/>
         </a-form-item>
         <a-form-item

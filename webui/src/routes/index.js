@@ -58,6 +58,7 @@ import SubscribeAdd from '@/pages/subscribe/Add';
 import SubscribeSearch from '@/pages/subscribe/Search';
 
 import HistoryRss from '@/pages/history/Rss';
+import HistoryReseedQueue from '@/pages/history/ReseedQueue';
 import HistorySubsribe from '@/pages/history/Subscribe';
 import HistoryWatchCategory from '@/pages/history/WatchCategory';
 
@@ -321,6 +322,12 @@ const history = {
       component: HistoryRss,
       meta: {
         title: 'RSS 历史 - 任务历史'
+      }
+    }, {
+      path: 'reseedQueue',
+      component: HistoryReseedQueue,
+      meta: {
+        title: '等待辅种 - 任务历史'
       }
     }, {
       path: 'subscribe',

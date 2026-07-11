@@ -147,6 +147,10 @@ class UserMod {
           path: '/history/rss',
           icon: ['fas', 'rss']
         }, {
+          title: '等待辅种',
+          path: '/history/reseedQueue',
+          icon: ['fas', 'hourglass-half']
+        }, {
           title: '订阅历史',
           path: '/history/subscribe',
           icon: ['fas', 'calendar-check']
