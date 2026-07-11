@@ -46,3 +46,31 @@ exports.createServer = async function (apiToken, options) {
 exports.deleteServer = async function (apiToken, serverId) {
   return await _request(apiToken, 'DELETE', `/servers/${serverId}`);
 };
+
+const _listAll = async function (apiToken, path, key) {
+  const items = [];
+  let page = 1;
+  while (page) {
+    const sep = path.indexOf('?') === -1 ? '?' : '&';
+    const body = await _request(apiToken, 'GET', `${path}${sep}page=${page}&per_page=50`);
+    items.push(...(body[key] || []));
+    page = body.meta && body.meta.pagination && body.meta.pagination.next_page;
+  }
+  return items;
+};
+
+exports.listLocations = async function (apiToken) {
+  return await _listAll(apiToken, '/locations', 'locations');
+};
+
+exports.listServerTypes = async function (apiToken) {
+  return await _listAll(apiToken, '/server_types', 'server_types');
+};
+
+exports.listSnapshots = async function (apiToken) {
+  return await _listAll(apiToken, '/images?type=snapshot', 'images');
+};
+
+exports.listDatacenters = async function (apiToken) {
+  return await _listAll(apiToken, '/datacenters', 'datacenters');
+};

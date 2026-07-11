@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Hzc = require('../common/Hzc');
+const hcloud = require('../libs/hcloud');
 
 const util = require('../libs/util');
 
@@ -98,6 +99,66 @@ class HzcMod {
     if (instance.processing) throw new Error('任务正在执行中');
     instance.process();
     return '任务已开始执行';
+  };
+
+  async discover (options) {
+    let apiToken = options.apiToken;
+    if ((!apiToken || apiToken === '******') && options.id) {
+      const filepath = path.join(hzcPath, options.id + '.json');
+      if (fs.existsSync(filepath)) {
+        apiToken = JSON.parse(fs.readFileSync(filepath, { encoding: 'utf-8' })).apiToken;
+      }
+    }
+    if (!apiToken || apiToken === '******') {
+      throw new Error('请先填写 API Token');
+    }
+    const [servers, locations, serverTypes, snapshots, datacenters] = await Promise.all([
+      hcloud.listServers(apiToken),
+      hcloud.listLocations(apiToken),
+      hcloud.listServerTypes(apiToken),
+      hcloud.listSnapshots(apiToken),
+      hcloud.listDatacenters(apiToken)
+    ]);
+    // 各区域支持的型号 id 集合, 用于标注策略型号在当前区域是否可用
+    const typesByLocation = {};
+    for (const dc of datacenters) {
+      const loc = dc.location && dc.location.name;
+      if (!loc) continue;
+      if (!typesByLocation[loc]) typesByLocation[loc] = new Set();
+      for (const id of ((dc.server_types && dc.server_types.available) || [])) {
+        typesByLocation[loc].add(id);
+      }
+    }
+    return {
+      servers: servers.map(s => ({
+        name: s.name,
+        ip: s.public_net && s.public_net.ipv4 ? s.public_net.ipv4.ip : '',
+        serverType: s.server_type && s.server_type.name,
+        location: s.datacenter && s.datacenter.location ? s.datacenter.location.name : '',
+        status: s.status
+      })),
+      locations: locations.map(l => ({
+        name: l.name,
+        description: l.description,
+        city: l.city,
+        country: l.country
+      })),
+      serverTypes: serverTypes.map(t => ({
+        id: t.id,
+        name: t.name,
+        cores: t.cores,
+        memory: t.memory,
+        disk: t.disk,
+        deprecated: !!t.deprecated,
+        availableLocations: locations.map(l => l.name).filter(loc => typesByLocation[loc] && typesByLocation[loc].has(t.id))
+      })),
+      snapshots: snapshots.map(i => ({
+        id: i.id,
+        description: i.description,
+        imageSize: i.image_size,
+        created: i.created
+      }))
+    };
   };
 }
 

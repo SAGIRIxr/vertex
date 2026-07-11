@@ -126,21 +126,49 @@
         <a-form-item
           label="API Token"
           name="apiToken"
-          :extra="hzc.id ? '留空表示不修改' : 'Hetzner Cloud 项目的 API Token, 需要读写权限'">
-          <a-input size="small" type="password" v-model:value="hzc.apiToken"/>
+          :extra="hzc.id ? '留空表示不修改; 点击获取账号资源可拉取服务器/区域/型号/快照供选择' : 'Hetzner Cloud 项目的 API Token, 需要读写权限'">
+          <a-input size="small" type="password" style="width: calc(100% - 116px);" v-model:value="hzc.apiToken"/>
+          <a-button size="small" style="margin-left: 8px; width: 108px;" :loading="discovering" @click="discover">获取账号资源</a-button>
+        </a-form-item>
+        <a-form-item v-if="resource" label="账号资源" extra="点击展开查看, 仅供参考; 型号已标注在当前区域是否可用">
+          <a-collapse>
+            <a-collapse-panel key="servers" :header="`现有服务器 (${resource.servers.length})`">
+              <div v-for="s of resource.servers" :key="s.name" style="font-size: 12px;">
+                {{ s.name }} · {{ s.ip }} · {{ s.serverType }} · {{ s.location }} · {{ s.status }}
+              </div>
+              <div v-if="!resource.servers.length" style="font-size: 12px;">账号内暂无服务器</div>
+            </a-collapse-panel>
+            <a-collapse-panel key="locations" :header="`可用区域 (${resource.locations.length})`">
+              <div v-for="l of resource.locations" :key="l.name" style="font-size: 12px;">
+                {{ l.name }} · {{ l.city }}, {{ l.country }}
+              </div>
+            </a-collapse-panel>
+            <a-collapse-panel key="snapshots" :header="`快照 (${resource.snapshots.length})`">
+              <div v-for="i of resource.snapshots" :key="i.id" style="font-size: 12px;">
+                {{ i.id }} · {{ i.description }} · {{ i.imageSize ? i.imageSize.toFixed(1) + 'GB' : '-' }} · {{ $moment(i.created).format('YYYY-MM-DD') }}
+              </div>
+              <div v-if="!resource.snapshots.length" style="font-size: 12px;">账号内暂无快照</div>
+            </a-collapse-panel>
+          </a-collapse>
         </a-form-item>
         <a-form-item
           label="区域"
           name="location"
-          extra="新建服务器所在区域, 例如: nbg1, fsn1, hel1, ash, hil"
+          extra="新建服务器所在区域, 例如: nbg1, fsn1, hel1, ash, hil; 获取账号资源后可下拉选择"
           :rules="[{ required: true, message: '${label}不可为空! ' }]">
-          <a-input size="small" v-model:value="hzc.location"/>
+          <a-auto-complete
+            size="small"
+            v-model:value="hzc.location"
+            :options="resource ? resource.locations.map(l => ({ value: l.name, label: `${l.name} (${l.city})` })) : []"
+            :filter-option="filterOption"/>
         </a-form-item>
         <a-form-item
           label="受管服务器名称"
           name="serverNames"
-          extra="仅列表内名称的服务器会被管理, 账号内其他服务器不受影响; 顺序即补建顺序, 回车添加">
-          <a-select size="small" mode="tags" v-model:value="hzc.serverNames" :open="false"/>
+          extra="⚠️ 列表内名称的服务器视为模块专属(达阈值会被删除重建), 请勿用于其他用途; 账号内其他服务器不受影响; 顺序即补建顺序, 回车添加或从候选选择">
+          <a-select size="small" mode="tags" v-model:value="hzc.serverNames">
+            <a-select-option v-for="s of (resource ? resource.servers : [])" :key="s.name" :value="s.name">{{ s.name }} ({{ s.ip }})</a-select-option>
+          </a-select>
         </a-form-item>
         <a-form-item
           label="目标数量"
@@ -177,8 +205,24 @@
           name="strategies"
           extra="从上到下依次尝试, 用于应对型号缺货; 型号需全小写 (如 cx43), 快照 ID 为数字">
           <div v-for="(strategy, index) of hzc.strategies" :key="index" style="margin-bottom: 4px;">
-            <a-input size="small" style="width: 160px;" placeholder="型号, 如 cx43" v-model:value="strategy.serverType"/>
-            <a-input size="small" style="width: 200px; margin-left: 8px;" placeholder="快照 ID" v-model:value="strategy.snapshotId"/>
+            <a-auto-complete
+              size="small"
+              style="width: 200px;"
+              placeholder="型号, 如 cx43"
+              v-model:value="strategy.serverType"
+              :options="typeOptions"
+              :filter-option="filterOption"/>
+            <a-select
+              v-if="resource && resource.snapshots.length"
+              size="small"
+              style="width: 260px; margin-left: 8px;"
+              placeholder="选择快照"
+              show-search
+              option-filter-prop="label"
+              v-model:value="strategy.snapshotId">
+              <a-select-option v-for="i of resource.snapshots" :key="i.id" :value="'' + i.id" :label="`${i.id} ${i.description}`">{{ i.id }} · {{ i.description }}</a-select-option>
+            </a-select>
+            <a-input v-else size="small" style="width: 260px; margin-left: 8px;" placeholder="快照 ID" v-model:value="strategy.snapshotId"/>
             <a style="color: red; margin-left: 8px;" @click="hzc.strategies.splice(index, 1)">删除</a>
           </div>
           <a-button size="small" @click="hzc.strategies.push({ serverType: '', snapshotId: '' })">添加策略</a-button>
@@ -228,6 +272,8 @@ export default {
       hzcList: [],
       states: [],
       notifications: [],
+      resource: null,
+      discovering: false,
       hzc: {},
       defaultHzc: {
         id: '',
@@ -251,6 +297,19 @@ export default {
       stateTimer: null
     };
   },
+  computed: {
+    typeOptions () {
+      if (!this.resource) return [];
+      const loc = this.hzc.location;
+      return this.resource.serverTypes.map(t => {
+        const supported = !loc || t.availableLocations.includes(loc);
+        const flags = [`${t.cores}核`, `${t.memory}GB`, `${t.disk}GB`];
+        if (t.deprecated) flags.push('已弃用');
+        if (!supported) flags.push('当前区域不可用');
+        return { value: t.name, label: `${t.name} (${flags.join('/')})` };
+      });
+    }
+  },
   methods: {
     isMobile () {
       if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
@@ -258,6 +317,25 @@ export default {
       } else {
         return false;
       }
+    },
+    filterOption (input, option) {
+      return ('' + option.value).toLowerCase().indexOf(input.toLowerCase()) !== -1 ||
+        ('' + (option.label || '')).toLowerCase().indexOf(input.toLowerCase()) !== -1;
+    },
+    async discover () {
+      if (!this.hzc.apiToken && !this.hzc.id) {
+        this.$message().error('请先填写 API Token');
+        return;
+      }
+      this.discovering = true;
+      try {
+        const res = await this.$api().hzc.discover({ apiToken: this.hzc.apiToken, id: this.hzc.id });
+        this.resource = res.data;
+        this.$message().success(`获取成功: 服务器 ${res.data.servers.length} / 区域 ${res.data.locations.length} / 型号 ${res.data.serverTypes.length} / 快照 ${res.data.snapshots.length}`);
+      } catch (e) {
+        this.$message().error(e.message);
+      }
+      this.discovering = false;
     },
     progressBar (current, total, length = 10) {
       const percentage = total > 0 ? current / total : 0;
@@ -349,8 +427,10 @@ export default {
     modifyClick (row) {
       this.hzc = { ...row, serverNames: [...(row.serverNames || [])], summaryNotify: [...(row.summaryNotify || [])], rebuildNotify: [...(row.rebuildNotify || [])], strategies: (row.strategies || []).map(item => ({ ...item })) };
       this.hzc.apiToken = '';
+      this.resource = null;
     },
     clearHzc () {
+      this.resource = null;
       this.hzc = {
         ...this.defaultHzc,
         serverNames: [],

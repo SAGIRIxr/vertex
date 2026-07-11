@@ -209,6 +209,7 @@ module.exports = function (app, express, router) {
   router.get('/hzc/listState', ctrl.Hzc.listState);
   router.post('/hzc/refresh', ctrl.Hzc.refresh);
   router.post('/hzc/run', ctrl.Hzc.run);
+  router.post('/hzc/discover', ctrl.Hzc.discover);
 
   router.get('/rss/listReseedQueue', ctrl.Rss.listReseedQueue);
   router.get('/rss/reseedQueueStats', ctrl.Rss.reseedQueueStats);

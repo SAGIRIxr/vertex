@@ -24,5 +24,9 @@ export default {
   run: async (id) => {
     const url = '/api/hzc/run';
     return await post(url, { id });
+  },
+  discover: async (body) => {
+    const url = '/api/hzc/discover';
+    return await post(url, body);
   }
 };

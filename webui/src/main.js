@@ -7,7 +7,7 @@ import {
   Drawer, Table, Divider, Descriptions, Col, Row, Tag,
   Checkbox, Select, Dropdown, Switch, Upload, Modal,
   Radio, Popover, Tree, Alert, notification as Notification,
-  Space
+  Space, AutoComplete, Collapse
 } from 'ant-design-vue';
 import App from './App';
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -56,7 +56,7 @@ const components = [
   Button, Form, Input, Menu, Layout, Drawer,
   Table, Divider, Descriptions, Col, Row, Tag,
   Checkbox, Select, Dropdown, Switch, Upload, Modal,
-  Radio, Popover, Tree, Alert, Space
+  Radio, Popover, Tree, Alert, Space, AutoComplete, Collapse
 ];
 
 for (const component of components) {
